@@ -26,6 +26,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.hibernate:hibernate-validator:8.0.0.Final")
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
+	implementation("org.springframework.boot:spring-boot-devtools:3.0.4")
 	runtimeOnly("org.postgresql:postgresql")
 	implementation("io.jsonwebtoken:jjwt-api:0.11.5")
 	compileOnly("org.projectlombok:lombok")

@@ -14,16 +14,16 @@ import java.util.Optional;
 @Service
 public class JwtUserDetailsService implements UserDetailsService {
 
-    private UnusUserRepository<UnusUser, String> userRepository;
+    private UnusUserRepository userRepository;
 
-    public JwtUserDetailsService(UnusUserRepository<UnusUser, String> userRepository) {
+    public JwtUserDetailsService(UnusUserRepository userRepository) {
         super();
         this.userRepository = userRepository;
     }
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Optional<UnusUser> tempUser = userRepository.findById(username);
+        Optional<UnusUser> tempUser = userRepository.findByEmail(username);
 
         if(tempUser.isPresent()) {
             return new User(tempUser.get().getEmail(), tempUser.get().getPassword(), new ArrayList<>());

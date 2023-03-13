@@ -3,6 +3,8 @@ package co.unus.daos;
 import co.unus.models.UnusUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.io.Serializable;
+import java.util.Optional;
 
-public interface UnusUserRepository<T, ID extends Serializable> extends JpaRepository<UnusUser, String> { }
+public interface UnusUserRepository extends JpaRepository<UnusUser, Long> {
+    Optional<UnusUser> findByEmail(String username);
+}
