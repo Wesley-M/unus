@@ -10,6 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -27,6 +28,9 @@ public class Space implements Serializable {
     private String name;
 
     @NotNull
+    private Boolean isPublic = false;
+
+    @NotNull
     private String code;
 
     @NotNull
@@ -37,9 +41,9 @@ public class Space implements Serializable {
     private LocalDateTime createdOn;
 
     @ManyToMany(mappedBy = "joinedSpaces")
-    private Set<UnusUser> members;
+    private Set<UnusUser> members = new HashSet<>();
 
-    public Space(String name, String code, UnusUser admin) {
+    public Space(String name, String code, Boolean isPublic, UnusUser admin) {
         this.name = name;
         this.admin = admin;
         this.code = code;

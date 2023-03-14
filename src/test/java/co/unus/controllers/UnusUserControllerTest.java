@@ -3,7 +3,7 @@ package co.unus.controllers;
 import co.unus.daos.UnusUserRepository;
 import co.unus.models.UnusUser;
 import co.unus.security.JwtRequest;
-import co.unus.services.JwtUserDetailsService;
+import co.unus.services.JwtService;
 import co.unus.services.UnusUserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -15,6 +15,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
@@ -32,7 +33,7 @@ class UnusUserControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private JwtUserDetailsService jwtService;
+    private JwtService jwtService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -42,6 +43,9 @@ class UnusUserControllerTest {
 
     @Autowired
     private UnusUserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     private final String SIGNUP_ENDPOINT = "/api/users/signup";
 
@@ -90,6 +94,8 @@ class UnusUserControllerTest {
     public void endPointWhenValidUserTriesLogin_shouldLogin() throws Exception {
         UnusUser user = new UnusUser("wesley@random.org", "123456", "wesley", LocalDate.parse("1999-11-29"));
         JwtRequest request = new JwtRequest(user.getEmail(), user.getPassword());
+        user.setPassword(this.passwordEncoder.encode(user.getPassword()));
+
         userService.signup(user);
 
         mockMvc.perform(post(LOGIN_ENDPOINT)

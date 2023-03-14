@@ -24,4 +24,9 @@ public class ExceptionController {
     public ResponseEntity<String> handleSpaceNotFoundException(SpaceNotFoundException snfe) {
         return new ResponseEntity<String>(snfe.getMessage(), HttpStatus.NOT_FOUND);
     }
+
+    @ExceptionHandler(value = IllegalArgumentException.class)
+    public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException iae) {
+        return new ResponseEntity<String>(iae.getMessage(), HttpStatus.BAD_REQUEST);
+    }
 }

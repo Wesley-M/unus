@@ -1,8 +1,7 @@
 package co.unus.controllers;
 
-import co.unus.dtos.SpaceBaseDTO;
-import co.unus.dtos.SpaceSimpleDTO;
-import co.unus.models.Space;
+import co.unus.dtos.SpaceOutputDTO;
+import co.unus.dtos.SpaceInputDTO;
 import co.unus.services.SpaceService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,21 +19,19 @@ public class SpaceController {
 
     @PostMapping(value = "/spaces")
     @ResponseStatus(HttpStatus.CREATED)
-    SpaceBaseDTO createSpace(@RequestBody @Valid SpaceSimpleDTO dto, Authentication authentication) {
-        return spaceService.createSpace(dto.name(), authentication.getName());
+    SpaceOutputDTO createSpace(@RequestBody @Valid SpaceInputDTO dto, Authentication authentication) {
+        return spaceService.createSpace(dto, authentication.getName());
     }
 
     @GetMapping(value = "/spaces/{code}", consumes="*/*")
     @ResponseStatus(HttpStatus.OK)
-    SpaceBaseDTO getSpaceByCode(@PathVariable("code") String code) {
+    SpaceOutputDTO getSpaceByCode(@PathVariable("code") String code) {
         return spaceService.getSpaceByCode(code);
     }
-//
-//    void updateSpace() {
-//
-//    }
-//
-//    void deleteSpace() {
-//
-//    }
+
+    @PostMapping(value = "/spaces/{code}/join", consumes="*/*")
+    @ResponseStatus(HttpStatus.CREATED)
+    SpaceOutputDTO joinSpaceAsMember(@PathVariable("code") String code, Authentication authentication) {
+        return spaceService.joinSpaceAsMember(code, authentication.getName());
+    }
 }

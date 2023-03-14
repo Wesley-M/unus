@@ -1,6 +1,6 @@
 package co.unus.security;
 
-import co.unus.services.JwtUserDetailsService;
+import co.unus.services.UnusUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,7 +22,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
         prePostEnabled = true)
 public class WebSecurityConfig {
     @Autowired
-    JwtUserDetailsService userDetailsService;
+    UnusUserService userDetailsService;
 
     @Autowired
     private JwtAuthenticationEntryPoint unauthorizedHandler;
@@ -55,8 +55,8 @@ public class WebSecurityConfig {
         http.cors().and().csrf().disable()
                 .exceptionHandling().authenticationEntryPoint(unauthorizedHandler).and()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
-                .authorizeRequests().requestMatchers("/api/users/signup", "/api/users/authenticate").permitAll()
-                .requestMatchers("/api/auth").authenticated();
+                .authorizeRequests().requestMatchers("/api/users/**").permitAll()
+                .requestMatchers("/api/auth/**").authenticated();
 
         http.authenticationProvider(authenticationProvider());
 
