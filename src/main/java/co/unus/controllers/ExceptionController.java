@@ -1,7 +1,6 @@
 package co.unus.controllers;
 
-import co.unus.exceptions.SpaceNotFoundException;
-import co.unus.exceptions.UserAlreadyExistsException;
+import co.unus.exceptions.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -20,9 +19,14 @@ public class ExceptionController {
         return new ResponseEntity<String>(unfe.getMessage(), HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(value = SpaceNotFoundException.class)
-    public ResponseEntity<String> handleSpaceNotFoundException(SpaceNotFoundException snfe) {
-        return new ResponseEntity<String>(snfe.getMessage(), HttpStatus.NOT_FOUND);
+    @ExceptionHandler(value = ResourceNotFoundException.class)
+    public ResponseEntity<String> handleResourceNotFoundException(ResourceNotFoundException rnfe) {
+        return new ResponseEntity<String>(rnfe.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(value = ResourceAlreadyExistsException.class)
+    public ResponseEntity<String> handleResourceAlreadyExistsException(ResourceAlreadyExistsException rae) {
+        return new ResponseEntity<String>(rae.getMessage(), HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(value = IllegalArgumentException.class)

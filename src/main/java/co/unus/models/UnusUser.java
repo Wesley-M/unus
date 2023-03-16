@@ -10,20 +10,18 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
+@EqualsAndHashCode(exclude = {"administeredSpaces", "joinedSpaces"})
 @Entity
 @Table(name = "UNUS_USER")
-public class UnusUser implements Serializable {
+public class UnusUser implements Serializable, Comparable<UnusUser> {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
     @NotNull
@@ -81,5 +79,10 @@ public class UnusUser implements Serializable {
 
     public Set<Space> getAdministeredSpaces() {
         return Collections.unmodifiableSet(administeredSpaces);
+    }
+
+    @Override
+    public int compareTo(UnusUser o) {
+        return this.name.compareTo(o.getName());
     }
 }

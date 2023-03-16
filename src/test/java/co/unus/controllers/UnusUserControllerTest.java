@@ -3,6 +3,7 @@ package co.unus.controllers;
 import co.unus.daos.UnusUserRepository;
 import co.unus.models.UnusUser;
 import co.unus.security.JwtRequest;
+import co.unus.security.JwtResponse;
 import co.unus.services.JwtService;
 import co.unus.services.UnusUserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,9 +18,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -47,9 +52,11 @@ class UnusUserControllerTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    private final String SIGNUP_ENDPOINT = "/api/users/signup";
+    private final String USERS_ENDPOINT = "/api/users";
 
-    private final String LOGIN_ENDPOINT = "/api/users/authenticate";
+    private final String SIGNUP_ENDPOINT = USERS_ENDPOINT + "/signup";
+
+    private final String LOGIN_ENDPOINT = USERS_ENDPOINT + "/authenticate";
 
     @AfterEach
     public void afterEachTest() {
@@ -103,5 +110,25 @@ class UnusUserControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().is2xxSuccessful())
                 .andExpect(content().contentTypeCompatibleWith("application/json"));
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("Tests user account deletion")
+    public void endPointWhenUserTriesToDeleteAccount_shouldDeleteAccount() throws Exception {
+        // Creating the user
+        UnusUser user = new UnusUser("wesley@random.org", "123456", "wesley", LocalDate.parse("1999-11-29"));
+        user.setPassword(this.passwordEncoder.encode(user.getPassword()));
+        userService.signup(user);
+
+        JwtResponse login = jwtService.createToken(user.getEmail(), "123456");
+
+        // Deleting the created user
+        mockMvc.perform(delete(USERS_ENDPOINT)
+                    .header("Authorization", "Bearer " + login.jwttoken()))
+                .andExpect(status().is2xxSuccessful());
+
+        Optional<UnusUser> storedUser = userRepository.findByEmail(user.getEmail());
+        assertTrue(storedUser.isEmpty());
     }
 }
