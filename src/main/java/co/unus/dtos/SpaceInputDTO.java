@@ -12,5 +12,5 @@ public class SpaceInputDTO {
     @NotBlank(message = "Space name should not be blank")
     String name;
 
-    Boolean isPublic;
+    Boolean isPublic = false;
 }

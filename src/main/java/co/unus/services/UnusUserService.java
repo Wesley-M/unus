@@ -33,22 +33,23 @@ public class UnusUserService implements UserDetailsService  {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Optional<UnusUser> tempUser = userRepository.findByEmail(username);
-
-        if(tempUser.isPresent()) {
-            return new User(tempUser.get().getEmail(), tempUser.get().getPassword(), new ArrayList<>());
-        } else {
-            throw new UsernameNotFoundException("User not found: " + username);
-        }
+        UnusUser user = getUser(username);
+        return new User(user.getEmail(), user.getPassword(), new ArrayList<>());
     }
 
     public void removeAccount(String email) {
-        Optional<UnusUser> storedUser = userRepository.findByEmail(email);
-
-        if(storedUser.isEmpty()) {
-            throw new UsernameNotFoundException("User not found: " + email);
-        }
-
+        // TODO: Manually remove related entities (e.g. Invitations, groups, spaces, ...)
+        UnusUser user = getUser(email);
         userRepository.deleteByEmail(email);
+    }
+
+    private UnusUser getUser(String email) {
+        return getUser(email, "User was not found");
+    }
+
+    private UnusUser getUser(String email, String message) {
+        Optional<UnusUser> storedUser = userRepository.findByEmail(email);
+        ExceptionThrower.throwIfNotFound(storedUser, message);
+        return storedUser.get();
     }
 }

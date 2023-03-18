@@ -19,6 +19,5 @@ public class InvitationInputDTO {
     private String targetEmail;
 
     @NotNull(message="Group id should not be null")
-    @NotBlank(message="Group id should not be blank")
     private Long groupId;
 }

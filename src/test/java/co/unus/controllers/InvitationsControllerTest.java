@@ -44,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @EnableAutoConfiguration
 @AutoConfigureMockMvc
 @Transactional
-class GroupControllerTest {
+class InvitationControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
@@ -82,11 +82,8 @@ class GroupControllerTest {
 
     private JwtResponse spaceAdminLogin;
 
-    private final String GROUPS_ENDPOINT = "/api/auth/groups";
-
     private final String INVITATIONS_ENDPOINT = "/api/auth/invitations";
 
-    private final String GROUP_REMOVAL_ENDPOINT = GROUPS_ENDPOINT + "/%x";
     private final ModelMapper mapper = new ModelMapper();
 
     private final String rawUserPassword = "123456";
@@ -105,89 +102,82 @@ class GroupControllerTest {
     }
 
     @Test
-    @DisplayName("Tests successful creation of group")
-    public void endPointWhenSavingGroup_shouldCreateGroup() throws Exception {
-        SpaceOutputDTO storedSpace = createSpace();
-        GroupInputDTO groupInput = new GroupInputDTO("random group", storedSpace.getCode(), false);
+    @DisplayName("Tests creation of invitation")
+    public void endPointWhenCreatingInvitation_shouldCreateInvitation() throws Exception {
+        SpaceOutputDTO space = createSpace();
+        JwtResponse member1Login = addSpaceMember("member1", space);
+        addSpaceMember("member2", space);
+        GroupOutputDTO group = createGroup("random group", space.getCode(), getStubEmail("member1"));
 
-        authPostRequest(GROUPS_ENDPOINT, spaceAdminLogin.jwttoken(), groupInput)
+        InvitationInputDTO input = new InvitationInputDTO(getStubEmail("member1"), getStubEmail("member2"), group.getId());
+        ResultActions resultActions = authPostRequest(INVITATIONS_ENDPOINT, member1Login.jwttoken(), input)
                 .andExpect(status().is2xxSuccessful());
 
-        Space currSpace = spaceRepository.findByCode(storedSpace.getCode()).get();
-        assertEquals(1, currSpace.getGroups().size());
-        assertEquals("random group", currSpace.getGroups().iterator().next().getName());
+        invitationResponseExists(resultActions);
     }
 
     @Test
-    @DisplayName("Tests creation of duplicate group")
-    public void endPointWhenSavingDuplicateGroup_shouldNotCreateGroup() throws Exception {
-        SpaceOutputDTO storedSpace = createSpace();
-        GroupInputDTO groupInput = new GroupInputDTO("random group", storedSpace.getCode(), false);
-
-        groupService.createGroup(groupInput, spaceAdmin.getEmail());
-        authPostRequest(GROUPS_ENDPOINT, spaceAdminLogin.jwttoken(), groupInput)
-                .andExpect(status().is4xxClientError());
-
-        Space currSpace = spaceRepository.findByCode(storedSpace.getCode()).get();
-        assertEquals(1, currSpace.getGroups().size());
-        assertEquals("random group", currSpace.getGroups().iterator().next().getName());
-    }
-
-    @Test
-    @DisplayName("Tests creation of group as an outsider")
-    public void endPointWhenTryingToCreateGroupAsOutsider_shouldNotCreateGroup() throws Exception {
+    @DisplayName("Tests creation of invitation [INVALID]")
+    public void endPointWhenCreatingInvalidInvitation_shouldNotCreateInvitation() throws Exception {
         SpaceOutputDTO space = createSpace();
-        JwtResponse outsiderLogin = addOutsider("outsider");
+        JwtResponse member1Login = addSpaceMember("member1", space);
+        JwtResponse member2Login = addSpaceMember("member2", space);
+        JwtResponse member3Login = addSpaceMember("member3", space);
+        JwtResponse member4Login = addSpaceMember("member4", space);
+        JwtResponse member5Login = addSpaceMember("member5", space);
+        JwtResponse outsider1Login = addOutsider("outsider1");
+        JwtResponse outsider2Login = addOutsider("outsider2");
 
-        GroupInputDTO groupInput = new GroupInputDTO("random group", space.getCode(), false);
-        authPostRequest(GROUPS_ENDPOINT, outsiderLogin.jwttoken(), groupInput)
+        GroupOutputDTO group1 = createGroup("random group", space.getCode(), getStubEmail("member1"));
+        GroupOutputDTO group2 = createGroup("random group 2", space.getCode(), getStubEmail("member5"));
+
+        // Same source and target users
+        InvitationInputDTO input = new InvitationInputDTO(getStubEmail("member1"), getStubEmail("member1"), group1.getId());
+        authPostRequest(INVITATIONS_ENDPOINT, member1Login.jwttoken(), input)
                 .andExpect(status().is4xxClientError())
-                .andExpect(result -> assertEquals("User is not in the space", result.getResolvedException().getMessage()));
+                .andExpect(result -> assertEquals("The source and target must be different", result.getResolvedException().getMessage()));
 
-        Space currSpace = spaceRepository.findByCode(space.getCode()).get();
-        assertEquals(0, currSpace.getGroups().size());
-    }
+        // Source user is different from the one making the invitation
+        input = new InvitationInputDTO(getStubEmail("member2"), getStubEmail("member1"), group1.getId());
+        authPostRequest(INVITATIONS_ENDPOINT, member1Login.jwttoken(), input)
+                .andExpect(status().is4xxClientError())
+                .andExpect(result -> assertEquals("The source must be the authenticated user", result.getResolvedException().getMessage()));
 
-    @Test
-    @DisplayName("Tests successful removal of a group [Space Admin]")
-    public void endPointWhenSpaceAdminRemovingGroup_shouldRemoveGroup() throws Exception {
-        SpaceOutputDTO space = createSpace();
-        addSpaceMember("member", space);
+        // Target user not found
+        input = new InvitationInputDTO(getStubEmail("member1"), getStubEmail("notfound"), group1.getId());
+        authPostRequest(INVITATIONS_ENDPOINT, member1Login.jwttoken(), input)
+                .andExpect(status().is4xxClientError())
+                .andExpect(result -> assertEquals("Target user was not found", result.getResolvedException().getMessage()));
 
-        GroupOutputDTO dto = createGroup("random group", space.getCode(), getStubEmail("member"));
-        authDeleteRequest(GROUP_REMOVAL_ENDPOINT, spaceAdminLogin.jwttoken(), dto.getId())
-                .andExpect(status().is2xxSuccessful());
+        // Group was not found
+        input = new InvitationInputDTO(getStubEmail("member1"), getStubEmail("member2"), group1.getId() + 100);
+        authPostRequest(INVITATIONS_ENDPOINT, member1Login.jwttoken(), input)
+                .andExpect(status().is4xxClientError())
+                .andExpect(result -> assertEquals("Group was not found", result.getResolvedException().getMessage()));
 
-        Space currSpace = spaceRepository.findByCode(space.getCode()).get();
-        assertEquals(0, currSpace.getGroups().size());
-    }
+        // There is no group admin here
+        input = new InvitationInputDTO(getStubEmail("member3"), getStubEmail("member4"), group1.getId());
+        authPostRequest(INVITATIONS_ENDPOINT, member3Login.jwttoken(), input)
+                .andExpect(status().is4xxClientError())
+                .andExpect(result -> assertEquals("Either the source is the group admin and the target is outside, or vice-versa", result.getResolvedException().getMessage()));
 
-    @Test
-    @DisplayName("Tests successful removal of a group [Group Admin]")
-    public void endPointWhenGroupAdminRemovingGroup_shouldRemoveGroup() throws Exception {
-        SpaceOutputDTO space = createSpace();
-        JwtResponse memberLogin = addSpaceMember("member", space);
-        GroupOutputDTO dto = createGroup("random group", space.getCode(), getStubEmail("member"));
+        // The two users are group admins
+        input = new InvitationInputDTO(getStubEmail("member1"), getStubEmail("member5"), group1.getId());
+        authPostRequest(INVITATIONS_ENDPOINT, member1Login.jwttoken(), input)
+                .andExpect(status().is4xxClientError())
+                .andExpect(result -> assertEquals("Either the source is the group admin and the target is outside, or vice-versa", result.getResolvedException().getMessage()));
 
-        authDeleteRequest(GROUP_REMOVAL_ENDPOINT, memberLogin.jwttoken(), dto.getId())
-                .andExpect(status().is2xxSuccessful());
+        // Trying to invite an outsider
+        input = new InvitationInputDTO(getStubEmail("member1"), getStubEmail("outsider1"), group1.getId());
+        authPostRequest(INVITATIONS_ENDPOINT, member1Login.jwttoken(), input)
+                .andExpect(status().is4xxClientError())
+                .andExpect(result -> assertEquals("Target is not a member of the space", result.getResolvedException().getMessage()));
 
-        Space currSpace = spaceRepository.findByCode(space.getCode()).get();
-        assertEquals(0, currSpace.getGroups().size());
-    }
-
-    @Test
-    @DisplayName("Tests invalid removal of a group [OUTSIDER]")
-    public void endPointWhenOutsiderTriesToRemoveGroup_shouldNotRemoveGroup() throws Exception {
-        SpaceOutputDTO space = createSpace();
-        JwtResponse outsiderLogin = addOutsider("outsider");
-
-        GroupOutputDTO dto = createGroup("random group", space.getCode(), spaceAdmin.getEmail());
-        authDeleteRequest(GROUP_REMOVAL_ENDPOINT, outsiderLogin.jwttoken(), dto.getId())
-                .andExpect(status().is4xxClientError());
-
-        Space currSpace = spaceRepository.findByCode(space.getCode()).get();
-        assertEquals(1, currSpace.getGroups().size());
+        // Outsider trying to invite group admin
+        input = new InvitationInputDTO(getStubEmail("outsider1"), getStubEmail("member1"), group1.getId());
+        authPostRequest(INVITATIONS_ENDPOINT, outsider1Login.jwttoken(), input)
+                .andExpect(status().is4xxClientError())
+                .andExpect(result -> assertEquals("Source is not a member of the space", result.getResolvedException().getMessage()));
     }
 
     private ResultActions authPostRequest(String url, String token) throws Exception {
@@ -239,6 +229,13 @@ class GroupControllerTest {
 
     private JwtResponse loginUser(String email) throws Exception {
         return jwtService.createToken(email, rawUserPassword);
+    }
+
+    private void invitationResponseExists(ResultActions resultActions) throws UnsupportedEncodingException, JsonProcessingException {
+        MvcResult result = resultActions.andReturn();
+        Invitation returnedInvitation = objectMapper.readValue(result.getResponse().getContentAsString(), Invitation.class);
+        Optional<Invitation> storedInvitation = invitationRepository.findById(returnedInvitation.getId());
+        assertTrue(storedInvitation.isPresent());
     }
 
     private String getStubEmail(String memberId) {

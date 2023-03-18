@@ -1,5 +1,6 @@
 package co.unus.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -25,7 +26,6 @@ public class Space implements Serializable {
     @NotNull
     private String name;
 
-    @NotNull
     private Boolean isPublic = false;
 
     @NotNull
@@ -39,6 +39,7 @@ public class Space implements Serializable {
     private LocalDateTime createdOn;
 
     @OneToMany(mappedBy = "space", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private Set<Group> groups = new HashSet<>();
 
     @ManyToMany(mappedBy = "joinedSpaces")

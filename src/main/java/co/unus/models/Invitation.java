@@ -27,12 +27,9 @@ public class Invitation {
     @ManyToOne(fetch = FetchType.LAZY)
     private Group group;
 
-    private Boolean sentByAdmin = false;
-
-    public Invitation(UnusUser source, UnusUser target, Group group, Boolean sentByAdmin) {
+    public Invitation(UnusUser source, UnusUser target, Group group) {
         this.source = source;
         this.target = target;
         this.group = group;
-        this.sentByAdmin = sentByAdmin;
     }
 }

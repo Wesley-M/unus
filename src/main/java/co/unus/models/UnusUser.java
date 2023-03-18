@@ -1,5 +1,6 @@
 package co.unus.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
@@ -42,10 +43,13 @@ public class UnusUser implements Serializable, Comparable<UnusUser> {
     @JoinTable(
             name = "user_joined_space",
             joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "space_id"))
+            inverseJoinColumns = @JoinColumn(name = "space_id")
+    )
+    @JsonIgnore
     private Set<Space> joinedSpaces = new HashSet<>();
 
     @OneToMany(mappedBy = "admin", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private Set<Space> administeredSpaces = new HashSet<>();
 
     public UnusUser(String email, String password, String name, @Past LocalDate birthDate) {

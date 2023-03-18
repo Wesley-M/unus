@@ -32,11 +32,8 @@ public class JwtService {
 
     public JwtResponse createToken(String username, String password) throws Exception {
         authenticate(username, password);
-
         final UserDetails userDetails = userService.loadUserByUsername(username);
-
         final String token = jwtTokenUtil.generateToken(userDetails);
-
         return new JwtResponse(token);
     }
 

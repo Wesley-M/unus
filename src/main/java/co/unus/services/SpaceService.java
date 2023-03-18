@@ -5,13 +5,13 @@ import co.unus.daos.UnusUserRepository;
 import co.unus.dtos.SpaceOutputDTO;
 import co.unus.dtos.SpaceInputDTO;
 import co.unus.dtos.UnusUserOutputDTO;
-import co.unus.exceptions.ResourceNotFoundException;
 import co.unus.models.Space;
 import co.unus.models.UnusUser;
 import co.unus.utils.CodeGenerator;
 import co.unus.utils.ListMapper;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,9 +30,9 @@ public class SpaceService {
         this.userRepository = userRepository;
     }
 
-    public SpaceOutputDTO createSpace(SpaceInputDTO dto, String adminEmail) {
-        Optional<UnusUser> storedUser = userRepository.findByEmail(adminEmail);
-        UnusUser user = storedUser.get();
+    @Transactional
+    public SpaceOutputDTO createSpace(SpaceInputDTO dto, String email) {
+        UnusUser user = getUser(email);
 
         Space space = new Space(dto.getName(), getUniqueCode(), dto.getIsPublic(), user);
         user.joinSpaceAsAdmin(space);
@@ -43,7 +43,7 @@ public class SpaceService {
 
     public void removeSpace(String code, String email) {
         Space space = getSpace(code);
-        throwIfNotAdmin(space, email, "Only the admin should remove the space");
+        throwIfNotSpaceAdmin(space, email, "Only the admin should remove the space");
 
         // TODO: Should consider a custom query. This is
         //  inefficient number-of-queries wise
@@ -58,14 +58,13 @@ public class SpaceService {
         return mapper.map(space, SpaceOutputDTO.class);
     }
 
+    @Transactional
     public SpaceOutputDTO joinSpaceAsMember(String code, String email) {
+        UnusUser user = getUser(email);
         Space space = getSpace(code);
-        throwIfAdmin(space, email, "User is already the space admin.");
+        throwIfSpaceAdmin(space, email, "User is already the space admin.");
 
-        Optional<UnusUser> storedUser = userRepository.findByEmail(email);
-        UnusUser user = storedUser.get();
         user.joinSpace(space);
-
         userRepository.save(user);
         spaceRepository.save(space);
 
@@ -73,21 +72,19 @@ public class SpaceService {
     }
 
     public void leaveSpaceAsMember(String code, String email) {
+        UnusUser user = getUser(email);
         Space space = getSpace(code);
-        throwIfAdmin(space, email, "The admin can not leave the space, delete it instead");
-        throwIfNotMember(space, email, "Only a member of the space can leave it");
+        throwIfSpaceAdmin(space, email, "The admin can not leave the space, delete it instead");
+        throwIfNotSpaceMember(space, email, "Only a member of the space can leave it");
 
-        Optional<UnusUser> storedUser = userRepository.findByEmail(email);
-        UnusUser user = storedUser.get();
         user.leaveSpace(space);
-
         userRepository.save(user);
         spaceRepository.save(space);
     }
 
     public List<UnusUserOutputDTO> getMembers(String code, String email) {
         Space space = getSpace(code);
-        throwIfNotMember(space, email, "Only a member can see other space members");
+        throwIfNotSpaceMember(space, email, "Only a member can see other space members");
 
         List<UnusUser> members = space.getMembers().stream()
                 .sorted()
@@ -96,9 +93,19 @@ public class SpaceService {
         return ListMapper.mapList(members, UnusUserOutputDTO.class);
     }
 
+    private UnusUser getUser(String email) {
+        return getUser(email, "User was not found");
+    }
+
+    private UnusUser getUser(String email, String message) {
+        Optional<UnusUser> storedUser = userRepository.findByEmail(email);
+        ExceptionThrower.throwIfNotFound(storedUser, message);
+        return storedUser.get();
+    }
+
     private Space getSpace(String code) {
         Optional<Space> storedSpace = spaceRepository.findByCode(code);
-        throwIfEmpty(storedSpace);
+        ExceptionThrower.throwIfNotFound(storedSpace, "Space was not found.");
         return storedSpace.get();
     }
 
@@ -110,27 +117,18 @@ public class SpaceService {
         return code;
     }
 
-    private void throwIfEmpty(Optional<Space> space) {
-        if (space.isEmpty()) {
-            throw new ResourceNotFoundException("Space was not found.");
-        }
+    private void throwIfSpaceAdmin(Space space, String email, String message) {
+        boolean isSpaceAdmin = space.getAdmin().getEmail().equals(email);
+        ExceptionThrower.throwIfIllegal(isSpaceAdmin, message);
     }
 
-    private void throwIfAdmin(Space space, String email, String message) {
-        if (space.getAdmin().getEmail().equals(email)) {
-            throw new IllegalArgumentException(message);
-        }
+    private void throwIfNotSpaceAdmin(Space space, String email, String message) {
+        boolean isSpaceAdmin = space.getAdmin().getEmail().equals(email);
+        ExceptionThrower.throwIfIllegal(!isSpaceAdmin, message);
     }
 
-    private void throwIfNotAdmin(Space space, String email, String message) {
-        if (!space.getAdmin().getEmail().equals(email)) {
-            throw new IllegalArgumentException(message);
-        }
-    }
-
-    private void throwIfNotMember(Space space, String email, String message) {
-        if (!spaceRepository.isMember(space.getCode(), email)) {
-            throw new IllegalArgumentException(message);
-        }
+    private void throwIfNotSpaceMember(Space space, String email, String message) {
+        boolean isNotMember = !spaceRepository.isMember(space.getCode(), email);
+        ExceptionThrower.throwIfIllegal(isNotMember, message);
     }
 }

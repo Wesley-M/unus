@@ -12,7 +12,7 @@ import java.util.Set;
 @NoArgsConstructor
 @Getter
 @Setter
-@EqualsAndHashCode
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "UNUS_GROUP")
 public class Group {
@@ -21,6 +21,7 @@ public class Group {
     private Long id;
 
     @NotNull
+    @EqualsAndHashCode.Include
     private String name;
 
     @NotNull
@@ -31,6 +32,7 @@ public class Group {
     private UnusUser admin;
 
     @NotNull
+    @EqualsAndHashCode.Include
     @ManyToOne(fetch = FetchType.LAZY)
     private Space space;
 

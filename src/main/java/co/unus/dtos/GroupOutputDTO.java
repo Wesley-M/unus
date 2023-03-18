@@ -10,7 +10,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class GroupOutputDTO {
+    Long id;
     String name;
-    Boolean isPublic;
+    Boolean isOpen;
     LocalDateTime createdOn;
 }
